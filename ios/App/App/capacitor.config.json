@@ -1,0 +1,13 @@
+{
+  "appId": "com.diligentdev.photosharingapp",
+  "appName": "photosharingapp",
+  "bundledWebRuntime": false,
+  "npmClient": "npm",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  },
+  "cordova": {}
+}

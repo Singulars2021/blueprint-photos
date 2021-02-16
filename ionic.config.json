@@ -1,0 +1,8 @@
+{
+  "name": "photo-sharing-app",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue",
+  "id": "ec219072"
+}

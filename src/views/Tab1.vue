@@ -7,10 +7,16 @@
     </ion-header>
     <ion-content :fullscreen="true">
       <div class="center">
-        <ion-button size="large" @click="takePicture">
-          <ion-icon :icon="camera"></ion-icon> &nbsp; Camera
+        <ion-button size="large" @click="takePicture"> Camera </ion-button>
+        <ion-button size="large" @click="uploadPhotos">
+          Upload Photos!
         </ion-button>
+        <p v-if="error">{{ error }}</p>
       </div>
+      <div class="preview" v-if="images.length > 0">
+        <img v-for="image in images" :key="image.id" :src="image.preview" />
+      </div>
+      <div v-else>Upload photos to preview here</div>
     </ion-content>
   </ion-page>
 </template>
@@ -23,10 +29,9 @@ import {
   IonTitle,
   IonContent,
   IonButton,
-  IonIcon,
 } from "@ionic/vue";
 
-import { camera } from "ionicons/icons";
+// import { camera } from "ionicons/icons";
 
 import { storage, auth, db } from "../main";
 import { Plugins, CameraResultType } from "@capacitor/core";
@@ -50,44 +55,51 @@ export default {
     IonContent,
     IonPage,
     IonButton,
-    IonIcon,
   },
-  setup() {
-    const takePicture = async () => {
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-      });
-
-      if (image?.base64String) {
-        const user = auth.currentUser;
-
-        const guid = uuidv4();
-
-        const filePath = `${user?.uid}/images/${guid}.${image.format}`;
-
-        const storageRef = storage.ref();
-
-        await storageRef
-          .child(filePath)
-          .putString(image.base64String, "base64");
-        const url = await storageRef.child(filePath).getDownloadURL();
-
-        await db
-          .collection("users")
-          .doc(user?.uid)
-          .collection("images")
-          .add({
-            image: url,
-          });
-      }
-    };
-
+  data() {
     return {
-      camera,
-      takePicture,
+      images: [],
+      error: null,
     };
+  },
+  methods: {
+    async takePicture() {
+      if (this.images.length < 5) {
+        const image = await Camera.getPhoto({
+          quality: 60,
+          resultType: CameraResultType.Base64,
+        });
+
+        this.images.push({
+          ...image,
+          id: new Date().toISOString,
+          preview: "data:image/jpeg;base64," + image.base64String,
+        });
+      } else {
+        this.error = "You can only upload 5 pictures!";
+      }
+    },
+
+    async uploadPhotos() {
+      for (let i = 0; i < this.images.length; i++) {
+        await this.uploadPhoto(i);
+      }
+    },
+    async uploadPhoto(index) {
+      const user = auth.currentUser;
+      const guid = uuidv4();
+      const filePath = `${user?.uid}/images/${guid}.${this.images[index].format}`;
+      const storageRef = storage.ref();
+
+      await storageRef
+        .child(filePath)
+        .putString(this.images[index].base64String, "base64");
+      const url = await storageRef.child(filePath).getDownloadURL();
+
+      await db.collection("users").doc(user?.uid).collection("images").add({
+        image: url,
+      });
+    },
   },
 };
 </script>
@@ -98,5 +110,17 @@ export default {
   align-items: center;
   justify-content: center;
   height: 80vh;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 2rem;
+}
+
+img {
+  margin: 1rem;
 }
 </style>
